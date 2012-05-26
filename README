@@ -1,6 +1,6 @@
 There is a BlueLogger.apk in the bin directory
 
-This is an extension to BlueTerm, adding: 
+This is an extension to the Android VT100 emulator for serial Bluetooth, BlueTerm, adding: 
 
 gzipped logging of what is received in the downloads directory as BT-(time).txt.gz
 Get SkyTraq AGPS from ftp to download directory
