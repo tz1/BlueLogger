@@ -1,3 +1,5 @@
+There is a BlueLogger.apk in the bin directory
+
 This is an extension to BlueTerm, adding: 
 
 gzipped logging of what is received in the downloads directory as BT-(time).txt.gz
