@@ -1,0 +1,7 @@
+This is an extension to BlueTerm, adding: 
+
+gzipped logging of what is received in the downloads directory as BT-(time).txt.gz
+Get SkyTraq AGPS from ftp to download directory
+(not quite yet) upload AGPS to SkyTraq Venus chip.
+Reconnect (one attempt) if the disconnect was not done by tapping disconnect.
+
