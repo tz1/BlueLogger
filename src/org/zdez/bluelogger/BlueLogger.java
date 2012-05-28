@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -16,6 +17,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
@@ -626,7 +628,7 @@ public class BlueLogger extends Activity {
     	}
     	
     	private byte setagps[] = { (byte) 0xa0, (byte) 0xa1, 0x00, 0x01, 0x35, 0x35, 0x0d, 0x0a };
-    	private byte agpsresp[] = { (byte) 0xa0, (byte) 0xa1, 0x00, 0x02, (byte) 0x83, 0x35, (byte) 0xb6, 0x0d, 0x0a };
+    	//private byte agpsresp[] = { (byte) 0xa0, (byte) 0xa1, 0x00, 0x02, (byte) 0x83, 0x35, (byte) 0xb6, 0x0d, 0x0a };
     	private byte agpsenable[] = { (byte) 0xa0, (byte) 0xa1, 0x00, 0x02, 0x33, 0x01, 0x32, 0x0d, 0x0a };
     	
         public void run() {
@@ -634,7 +636,7 @@ public class BlueLogger extends Activity {
 
         	int len = 0;
         	int bufmax = 256*1024;
-        	byte[] buf = new byte[bufmax];
+        	byte [] buf = new byte[bufmax];
         	String retr = "Accessing downloaded file\r\n";
         	try {
         		System.err.println(retr);
@@ -657,16 +659,16 @@ public class BlueLogger extends Activity {
         	        csuma += buf[i];
         	    csuma &= 0xff;
         	    csumb &= 0xff;
-        	    //mmOutStream.write(setagps, 0, setagps.length);
+        	    send(setagps);
         	    sleep(1000);
         	    String astline = "BINSIZE = " + len + " Checksum = " + csuma + " Checksumb = " + csumb + " ";
         		retr = astline + "\r\n";
         		System.err.println(retr);
         		mEmulatorView.write(retr.getBytes(),retr.length());
         		
-        		//mmOutStream.write(astline.getBytes(), 0, astline.length());
+        		send(astline.getBytes());
         		
-        		retr = "Sending SkyTraq AGPS data\r\n";
+        		retr = "\r\nSending SkyTraq AGPS data\r\n";
         		System.err.println(retr);
         		mEmulatorView.write(retr.getBytes(),retr.length());
         		
@@ -677,8 +679,7 @@ public class BlueLogger extends Activity {
             		retr = ((tot - len) * 100 / tot) + "\r\n";
             		System.err.println(retr);
             		mEmulatorView.write(retr.getBytes(),retr.length());
-
-        	    	//mmOutStream.write(buf, ofst, len > 8192 ? 8192 : len);
+            		send(Arrays.copyOfRange(buf, ofst, ofst + (len > 8192 ? 8192 : len)));
             		// should respond with OK
             		sleep(1000);
         	        len -= 8192;
@@ -686,7 +687,7 @@ public class BlueLogger extends Activity {
         	    }
         	    // should respond with END
         		sleep(1000);
-        	    //mmOutStream.write(agpsenable, 0, agpsenable.length);
+        	    send(agpsenable);
         		retr = "(Not Implemented)\r\n";
         		System.err.println(retr);
         		mEmulatorView.write(retr.getBytes(),retr.length());
@@ -700,6 +701,8 @@ public class BlueLogger extends Activity {
         }
     }    
     private SendAGPSThread mSendAGPSThread;
+    private PowerManager mPm;
+    private PowerManager.WakeLock mWl;
     
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -710,13 +713,17 @@ public class BlueLogger extends Activity {
         		// Launch the DeviceListActivity to see devices and do scan
         		Intent serverIntent = new Intent(this, DeviceListActivity.class);
         		startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
+           		mPm = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
+        		mWl = mPm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BlueLog");
+        		mWl.acquire();
         	}
         	else
             	if (getConnectionState() == BluetoothSerialService.STATE_CONNECTED) {
+           		 	mWl.release();
             		mSerialService.stop();
 		    		mSerialService.start();
             	}
-            return true;
+             return true;
         case R.id.preferences:
         	doPreferences();
         	return true;
@@ -1243,6 +1250,7 @@ class TranscriptScreen implements Screen {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Renders text into a screen. Contains all the terminal-specific knowlege and
  * state. Emulates a subset of the X Window System xterm terminal, which in turn

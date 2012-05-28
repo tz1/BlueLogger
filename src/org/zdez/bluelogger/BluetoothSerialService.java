@@ -25,8 +25,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 import java.util.Date;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 import java.text.SimpleDateFormat;
+//import java.util.zip.Deflater;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -345,24 +347,34 @@ public class BluetoothSerialService {
         	try {
         		FileOutputStream logfy = new FileOutputStream(logfy0);
         		BufferedOutputStream logfw = new BufferedOutputStream(logfy);
-        		GZIPOutputStream zos = new GZIPOutputStream(new BufferedOutputStream(logfw));
-
+        		GZIPOutputStream zos = new GZIPOutputStream(logfw)
+        		{
+        		    {
+        		        def.setLevel(Deflater.BEST_COMPRESSION);
+        		    }
+        		};
+        		//zos.setLevel(BEST_COMPRESSION);
         		// Keep listening to the InputStream while connected
         		int rxblocks = 0;
+
         		while (true) {
         			try {
         				// Read from the InputStream
-        				bytes = mmInStream.read(buffer);                                                                                                                                                                  
-        				zos.write(buffer, 0, bytes);  
-        				mEmulatorView.write(buffer, bytes);
-        				if( rxblocks++ > 5000 ) {
-        					// push the data through every 5000 blocks
-        					zos.flush();
-        					logfw.flush();
-        					logfy.flush();
-        					logfy.getFD().sync();
-        					rxblocks = 0;
-        				}
+        				bytes = mmInStream.read(buffer);
+        				if( bytes > 0 ) {
+        					zos.write(buffer, 0, bytes);  
+        					mEmulatorView.write(buffer, bytes);
+        					if( rxblocks++ > 5000 ) {
+        						// push the data through every 5000 blocks
+        						zos.flush();
+        						logfw.flush();
+        						logfy.flush();
+        						logfy.getFD().sync();
+        						rxblocks = 0;
+        					}
+        				} 
+        				else
+        					sleep(1);
         			} catch (Exception e) {
         				Log.e(TAG, "disconnected", e);
         				connectionLost();
@@ -375,11 +387,12 @@ public class BluetoothSerialService {
         	} catch (Exception e) {
         	}
         	if( brokenconn ) {
-				Log.e(TAG, "Broken Connection");
+				Log.e(TAG, "Broken Connection - will try reconnect");
 		        mConnectThread = new ConnectThread(mmDevice);
 		        mConnectThread.start();
 		        setState(STATE_CONNECTING);
         	}
+
         }
 
         /**
